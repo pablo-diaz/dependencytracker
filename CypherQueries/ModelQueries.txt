@@ -1,0 +1,40 @@
+// Get dependency graph for a specific Bitbucket Repo, in its "develop" branch and for a specific C# project
+
+match (bbp:BitBucketProject)-[:Ownes]->(repo:Repository)-[:IsBranchedIn]->(br:Branch)-[:Has]->(cs:CSharpProject)-[:DependsOn]->(lib:Library)-[:DependsOn*1..10]->(libn:Library)
+where repo.name = "Repo01" 
+	and br.name = "develop"
+	and cs.name = "develop - Repo01 - Project01"
+return bbp,repo,br,cs,lib,libn
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+// Get all projects that depend on different versions of the "CommonLib01" library
+
+match (br1:Branch)-[:Has]->(cs1:CSharpProject)-[:DependsOn]->(lib1:Library),
+    (br2:Branch)-[:Has]->(cs2:CSharpProject)-[:DependsOn]->(lib2:Library)
+where br1.name = "master"
+    and br2.name = "master"
+    and cs1.name <> cs2.name
+    and lib1.name = lib2.name and lib1.name = "CommonLib01"
+    and lib1.version <> lib2.version
+return br1, cs1, lib1, br2, cs2, lib2
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+// Get those repos that are considered as Releasable but that are pointing to Pre releasable libraries
+
+match (br:Branch)-[:Has]->(cs:CSharpProject)-[:DependsOn]->(lib:Library)
+where br.name = "master"
+	and lib.version contains "-PRE"
+return cs,lib
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+// Get those C# projects that are poiting to artifacts that no longer exist in Nexus
+
+match (br:Branch)-[:Has]->(cs:CSharpProject)-[:DependsOn]->(lib:Library)-[:DependsOn*1..10]->(libn:Library)
+where br.name = "develop"
+	and (lib.doesLibraryExistInNexus = false or libn.doesLibraryExistInNexus = false)
+return br, cs, lib, libn
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

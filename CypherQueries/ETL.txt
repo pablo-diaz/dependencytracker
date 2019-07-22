@@ -1,0 +1,21 @@
+// Place both "repos.csv" and "libs.csv" in the "import" folder of your Neo4j Database
+
+
+LOAD CSV WITH HEADERS FROM "file:///repos.csv" AS csvLine
+MERGE (bbp:BitBucketProject {name: csvLine.BitbucketProjectName})
+MERGE (repo:Repository {name: csvLine.RepositoryName})
+MERGE (branch:Branch {name: csvLine.BranchName})
+MERGE (chsarp:CSharpProject {name: csvLine.BranchName + " - " + csvLine.RepositoryName + " - " + csvLine.CSharpProjectName})
+MERGE (lib:Library {name: csvLine.LibraryName, version: csvLine.LibraryVersion, doesLibraryExistInNexus: toBoolean(csvLine.DoesLibraryExistInNexus)})
+MERGE (bbp)-[:Ownes]->(repo)
+MERGE (repo)-[:IsBranchedIn]->(branch)
+MERGE (branch)-[:Has]->(chsarp)
+MERGE (chsarp)-[:DependsOn]->(lib)
+
+
+
+
+LOAD CSV WITH HEADERS FROM "file:///libs.csv" AS csvLine
+MERGE (lib1:Library {name: csvLine.LibraryName, version: csvLine.LibraryVersion, doesLibraryExistInNexus: toBoolean(csvLine.DoesLibraryExistInNexus)})
+MERGE (lib2:Library {name: csvLine.DependencyName, version: csvLine.DependencyVersion, doesLibraryExistInNexus: toBoolean(csvLine.DoesDependencyExistInNexus)})
+MERGE (lib1)-[:DependsOn]->(lib2)
