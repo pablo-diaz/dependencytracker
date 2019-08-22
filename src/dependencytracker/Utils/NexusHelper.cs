@@ -71,26 +71,30 @@ namespace Utils
             if (!wasItSuccessfull)
                 return dependencies;
 
-            string nexusDependencies = parsedString.result.data[0].attributes.nuget.dependencies;
-            if(!string.IsNullOrEmpty(nexusDependencies))
+            try
             {
-                foreach(string nexusDependency in nexusDependencies.Split('|'))
+                string nexusDependencies = parsedString.result.data[0].attributes.nuget.dependencies;
+                if(!string.IsNullOrEmpty(nexusDependencies))
                 {
-                    var libraryInfo = nexusDependency.Split(':');
-                    if (libraryInfo.Length == 2)
+                    foreach(string nexusDependency in nexusDependencies.Split('|'))
                     {
-                        var libraryName = libraryInfo[0].Trim();
-                        var libraryVersion = libraryInfo[1].Trim().Replace("[", "").Replace("]", "");
-                        if (string.IsNullOrEmpty(libraryName) || string.IsNullOrEmpty(libraryVersion))
-                            continue;
+                        var libraryInfo = nexusDependency.Split(':');
+                        if (libraryInfo.Length == 2)
+                        {
+                            var libraryName = libraryInfo[0].Trim();
+                            var libraryVersion = libraryInfo[1].Trim().Replace("[", "").Replace("]", "");
+                            if (string.IsNullOrEmpty(libraryName) || string.IsNullOrEmpty(libraryVersion))
+                                continue;
 
-                        dependencies.Add(new Library() {
-                            Name = libraryName,
-                            Version = libraryVersion
-                        });
+                            dependencies.Add(new Library() {
+                                Name = libraryName,
+                                Version = libraryVersion
+                            });
+                        }
                     }
                 }
             }
+            catch { }
 
             return dependencies;
         }
@@ -125,14 +129,17 @@ namespace Utils
             var result = await _nexusHttpClient.PostAsync("/nexus/service/extdirect", postContent);
             result.EnsureSuccessStatusCode();
 
-            var stringResult = await result.Content.ReadAsStringAsync();
-            dynamic parsedString = JsonConvert.DeserializeObject(stringResult);
-
-            if (parsedString.result.total == 0)
+            try
+            {
+                var stringResult = await result.Content.ReadAsStringAsync();
+                dynamic parsedString = JsonConvert.DeserializeObject(stringResult);
+                var newSerializedValue = JsonConvert.SerializeObject(parsedString.result.data[0]);
+                return JsonConvert.DeserializeObject<NexusComponentDTO>(newSerializedValue);
+            }
+            catch
+            {
                 return null;
-
-            var newSerializedValue = JsonConvert.SerializeObject(parsedString.result.data[0]);
-            return JsonConvert.DeserializeObject<NexusComponentDTO>(newSerializedValue);
+            }
         }
     }
 }
